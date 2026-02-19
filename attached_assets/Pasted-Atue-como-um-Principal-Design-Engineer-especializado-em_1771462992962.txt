@@ -1,0 +1,41 @@
+Atue como um Principal Design Engineer especializado em Next.js 15, React 19 e Framer Motion.
+
+Objetivo: Criar um Web App One-Page de luxo para uma barbearia com estética "Precision Engineering". O foco é funcionalidade real (Agendamento + Auth + Admin) e performance imaculada (60/120fps).
+
+1. Estética e Shell Visual (Design Tokens):
+* Atmosfera: Dark Mode absoluto em #050505.
+* Materialidade: Glassmorphism 2.0 em todos os cartões (Background: rgba(255, 255, 255, 0.03), Backdrop-filter: blur(16px), Border: 1px solid rgba(255, 255, 255, 0.08)).
+* Textura: Aplique um overlay de ruído branco (Grain) sutil (2% opacidade) fixo na viewport para profundidade cinematográfica.
+* Tipografia: Use Geist Sans para títulos e Geist Mono estritamente para dados técnicos como preços e horários.
++4
+
+2. Sistema de Movimento (Physics-Based):
+
+Interação: Não use curvas de tempo fixas. Implemente Spring Physics em todas as transições (Stiffness: 400, Damping: 30).
+* Micro-interações: Todos os botões e cards devem ter um estado ativo de scale: 0.96 (compressão tátil).
+* Scroll: Use CSS Scroll-driven Animations (animation-timeline: view()) para a revelação de seções, eliminando JS da thread principal.
+* Transições: Use a View Transitions API (document.startViewTransition) para a expansão do agendamento e a troca para o Painel do Barbeiro.
++4
+
+3. Arquitetura de Estado e Funcionalidades (The Engine):
+* Dual-Store (Zustand): Crie uma store para gerenciar o estado global: user (auth), booking (serviço, data, hora) e admin (lista de agendamentos).
++1
+
+Fluxo de Agendamento:
+1. Hero: Cinema-style com tipografia cinética variável reagindo ao scroll.
+2. Lookbook: Galeria horizontal inercial com snappig magnético.
+3. Bento Services: Grid modular onde o card expande espacialmente (padrão FLIP) ao ser tocado.
+4. Auth Trigger: Se o usuário não estiver logado ao confirmar o horário, suba um Bottom Sheet (Glassmorphism) para cadastro rápido (Nome/Telefone).
+5. Confirmation: Ticket/Recibo final em estética Neo-Brutalista monoespaçada.
++4
+
+4. Área do Barbeiro (Admin View):
+
+No Footer, adicione um acesso discreto "Acesso Profissional".
+* Dashboard: Uma timeline vertical elegante mostrando os agendamentos salvos na store, com ações de status (Pendente/Confirmado/Cancelado).
++1
+
+5. Engenharia de Performance:
+* Imagens com decoding="async" e priority para LCP.
+* Use apenas propriedades que não triggerrão reflow (transform e opacity) nas animações de scroll.
++3
