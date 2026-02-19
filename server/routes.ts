@@ -98,23 +98,23 @@ async function seedDatabase() {
   if (existingServices.length === 0) {
     console.log("Seeding services...");
     await storage.createService({
-      name: "Precision Cut",
-      description: "Signature consultation + precision shear work + hot towel finish.",
-      price: 4500, // $45.00
+      name: "Corte Premium",
+      description: "Corte na tesoura/máquina com finalização de alta precisão.",
+      price: 8000, // R$ 80,00
       duration: 45,
       image: "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&q=80&w=1000",
     });
     await storage.createService({
-      name: "Beard Sculpt",
-      description: "Hot towel steam + straight razor lineup + oil treatment.",
-      price: 3500, // $35.00
+      name: "Barba Terapia",
+      description: "Toalha quente, massagem facial e alinhamento milimétrico.",
+      price: 5000, // R$ 50,00
       duration: 30,
       image: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&q=80&w=1000",
     });
     await storage.createService({
-      name: "The Executive",
-      description: "Full service cut + beard sculpt + black mask facial.",
-      price: 7500, // $75.00
+      name: "Combo Máster",
+      description: "Corte Premium + Barba Terapia + Assepsia completa.",
+      price: 12000, // R$ 120,00
       duration: 75,
       image: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=1000",
     });

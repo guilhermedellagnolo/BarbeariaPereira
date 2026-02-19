@@ -1,0 +1,34 @@
+Como Creative Director & Experience Architect, analiso o retorno do Replit e confirmo: vencemos o jogo arquitetônico.
+
+A injeção do Webhook foi feita de forma impecável. O uso do bloco try/catch garante que o site nunca vai travar para o cliente final, mesmo se o seu n8n estiver reiniciando. E a escolha do PostgreSQL com Drizzle ORM é o padrão ouro da engenharia de software em 2026. É o mesmo motor usado por startups de alto escalão.
+
+Como este é o último prompt, não vamos pedir mais nenhuma funcionalidade (features). O foco agora é "Handover" (Transferência de Custódia).
+
+O maior risco ao tirar um projeto do Replit e rodar no seu computador (VS Code) é o banco de dados quebrar, porque o Replit hospeda o PostgreSQL na nuvem dele. Precisamos forçar a IA a preparar o terreno para que o seu localhost funcione de primeira, além de injetar os dados reais dos cortes de cabelo para você não ter que fazer isso do zero.
+
+Aqui está o Prompt de Extração Definitiva.
+
+COPIE E COLE NO REPLIT (O ÚLTIMO PROMPT):
+Role: Principal DevOps Engineer & Tech Lead.
+Esta é a nossa última iteração antes de eu exportar o projeto em .zip para rodar localmente no meu VS Code. O código está excelente. Precisamos preparar o "Handover" e o Seed do Banco de Dados.
+
+Tarefa 1: Seed de Dados Reais (Cardápio)
+Atualize o arquivo que popula o banco de dados inicialmente (seed/storage) para conter os seguintes serviços reais (ajuste o schema se necessário para suportar 'duration'):
+
+Nome: "Corte Premium", Preço: 80, Duração: "45 min", Descrição: "Corte na tesoura/máquina com finalização de alta precisão."
+
+Nome: "Barba Terapia", Preço: 50, Duração: "30 min", Descrição: "Toalha quente, massagem facial e alinhamento milimétrico."
+
+Nome: "Combo Máster", Preço: 120, Duração: "1h 15m", Descrição: "Corte Premium + Barba Terapia + Assepsia completa."
+
+Tarefa 2: Preparação para Localhost (VS Code)
+Como o banco atual é PostgreSQL, eu precisarei rodar isso localmente.
+
+Crie um arquivo .env.example na raiz do projeto com as chaves: DATABASE_URL="" e N8N_WEBHOOK_URL="".
+
+Adicione comentários no topo do README.md explicando exatamente qual comando eu devo rodar no meu terminal local para criar as tabelas do Drizzle no meu banco (ex: npm run db:push).
+
+Tarefa 3: Tratamento de Falha de Conexão (Resiliência)
+Garanta que o frontend não quebre (Tela Branca) se o banco de dados não conectar imediatamente quando eu abrir no meu PC. Envolva as chamadas de banco no Frontend (na busca de serviços) em um tratamento de erro que retorne um array vazio ou mostre um estado de "Carregando sistema..." elegante, em vez de um erro 500.
+
+Revise tudo. Assim que confirmar, declare o projeto pronto para download.

@@ -151,7 +151,7 @@ function Services() {
               <div>
                 <div className="flex justify-between items-start mb-6">
                   <Scissors className="w-6 h-6 text-white/50 group-hover:text-white transition-colors" />
-                  <span className="font-mono text-xl text-white">${(service.price / 100).toFixed(2)}</span>
+                  <span className="font-mono text-xl text-white">R$ {(service.price / 100).toFixed(2)}</span>
                 </div>
                 <h3 className="text-2xl font-display text-white mb-2">{service.name}</h3>
                 <p className="text-white/50 text-sm leading-relaxed">{service.description}</p>
