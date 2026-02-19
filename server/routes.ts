@@ -25,6 +25,33 @@ export async function registerRoutes(
     try {
       const input = api.bookings.create.input.parse(req.body);
       const booking = await storage.createBooking(input);
+      
+      // n8n Webhook Integration
+      const webhookUrl = process.env.N8N_WEBHOOK_URL;
+      if (webhookUrl && webhookUrl !== "COLOQUE_SEU_WEBHOOK_AQUI") {
+        try {
+          // Get service name for the webhook payload
+          const services = await storage.getServices();
+          const service = services.find(s => s.id === booking.serviceId);
+          
+          await fetch(webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              event: "new_booking",
+              customerName: booking.customerName,
+              customerPhone: booking.customerPhone,
+              serviceName: service?.name || "Unknown Service",
+              date: booking.date,
+              time: booking.time,
+              price: service?.price || 0
+            })
+          });
+        } catch (webhookError) {
+          console.error("n8n Webhook failed:", webhookError);
+        }
+      }
+
       res.status(201).json(booking);
     } catch (err) {
       if (err instanceof z.ZodError) {
