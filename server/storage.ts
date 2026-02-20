@@ -12,6 +12,9 @@ import {
   type InsertBooking,
   type BlockedTime,
   type InsertBlockedTime,
+  shopSettings,
+  type ShopSettings,
+  type InsertShopSettings,
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
@@ -41,6 +44,10 @@ export interface IStorage {
   getBlockedTimes(): Promise<BlockedTime[]>;
   createBlockedTime(blockedTime: InsertBlockedTime): Promise<BlockedTime>;
   deleteBlockedTime(id: number): Promise<void>;
+
+  // Shop Settings
+  getShopSettings(): Promise<ShopSettings>;
+  updateShopSettings(settings: InsertShopSettings): Promise<ShopSettings>;
 
   sessionStore: session.Store;
 }
@@ -126,6 +133,36 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBlockedTime(id: number): Promise<void> {
     await db.delete(blockedTimes).where(eq(blockedTimes.id, id));
+  }
+
+  async getShopSettings(): Promise<ShopSettings> {
+    try {
+      const [settings] = await db.select().from(shopSettings).limit(1);
+      if (settings) return settings;
+      
+      // Create default if not exists
+      const [newSettings] = await db.insert(shopSettings).values({
+        openTime: "09:00",
+        closeTime: "19:00",
+      }).returning();
+      
+      if (newSettings) return newSettings;
+    } catch (error) {
+      console.error("Database error in getShopSettings, using fallback:", error);
+    }
+    
+    // Ultimate fallback protection
+    return { id: 1, openTime: "09:00", closeTime: "19:00" };
+  }
+
+  async updateShopSettings(update: InsertShopSettings): Promise<ShopSettings> {
+    const existing = await this.getShopSettings();
+    const [settings] = await db
+      .update(shopSettings)
+      .set(update)
+      .where(eq(shopSettings.id, existing.id))
+      .returning();
+    return settings;
   }
 }
 

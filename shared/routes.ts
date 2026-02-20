@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertBookingSchema, insertUserSchema, insertServiceSchema, bookings, services, users, blockedTimes, insertBlockedTimeSchema } from './schema';
+import { insertBookingSchema, insertUserSchema, insertServiceSchema, bookings, services, users, blockedTimes, insertBlockedTimeSchema, shopSettings, insertShopSettingsSchema } from './schema';
 
 export * from './schema';
 
@@ -126,7 +126,6 @@ export const api = {
       path: '/api/blocked-times' as const,
       responses: {
         200: z.array(z.custom<typeof blockedTimes.$inferSelect>()),
-        401: errorSchemas.unauthorized,
       },
     },
     create: {
@@ -146,6 +145,25 @@ export const api = {
         204: z.void(),
         401: errorSchemas.unauthorized,
         404: errorSchemas.notFound,
+      },
+    },
+  },
+  settings: {
+    get: {
+      method: 'GET' as const,
+      path: '/api/settings' as const,
+      responses: {
+        200: z.custom<typeof shopSettings.$inferSelect>(),
+      },
+    },
+    update: {
+      method: 'POST' as const,
+      path: '/api/settings' as const,
+      input: insertShopSettingsSchema,
+      responses: {
+        200: z.custom<typeof shopSettings.$inferSelect>(),
+        400: errorSchemas.validation,
+        401: errorSchemas.unauthorized,
       },
     },
   },

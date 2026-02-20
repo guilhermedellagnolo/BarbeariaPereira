@@ -46,6 +46,13 @@ export const blockedTimes = pgTable("blocked_times", {
   reason: text("reason"),
 });
 
+// Shop Settings (Singleton or Key-Value, using Singleton for simplicity as requested)
+export const shopSettings = pgTable("shop_settings", {
+  id: serial("id").primaryKey(),
+  openTime: text("open_time").notNull().default("09:00"),
+  closeTime: text("close_time").notNull().default("19:00"),
+});
+
 // === SCHEMAS ===
 
 export const insertUserSchema = createInsertSchema(users, {
@@ -73,6 +80,10 @@ export const insertBlockedTimeSchema = createInsertSchema(blockedTimes, {
   endTime: z.string().max(5).nullable(),
   reason: z.string().max(255).nullable(),
 });
+export const insertShopSettingsSchema = createInsertSchema(shopSettings, {
+  openTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato inválido (HH:MM)"),
+  closeTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato inválido (HH:MM)"),
+});
 
 // === TYPES ===
 
@@ -80,16 +91,19 @@ export type User = typeof users.$inferSelect;
 export type Service = typeof services.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type BlockedTime = typeof blockedTimes.$inferSelect;
+export type ShopSettings = typeof shopSettings.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertService = z.infer<typeof insertServiceSchema>;
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type InsertBlockedTime = z.infer<typeof insertBlockedTimeSchema>;
+export type InsertShopSettings = z.infer<typeof insertShopSettingsSchema>;
 
 // Request types
 export type CreateBookingRequest = InsertBooking;
 export type UpdateBookingStatusRequest = { status: "pending" | "confirmed" | "cancelled" | "completed" };
 export type CreateBlockedTimeRequest = InsertBlockedTime;
+export type UpdateShopSettingsRequest = InsertShopSettings;
 
 // API Response types
 export type ServiceResponse = Service;

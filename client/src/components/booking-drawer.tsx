@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { useBookingStore } from "@/hooks/use-store";
-import { useCreateBooking, useBlockedTimes, useAvailability } from "@/hooks/use-bookings";
+import { useCreateBooking, useBlockedTimes, useAvailability, useAvailableSlots } from "@/hooks/use-bookings";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Check, ArrowLeft } from "lucide-react";
@@ -28,11 +28,11 @@ export function BookingDrawer() {
 
   const createBooking = useCreateBooking();
   const { data: blockedTimes } = useBlockedTimes();
-  const { data: availability } = useAvailability();
+  // We rely on server-side availability calculation now
+  const formattedDate = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined;
+  const { data: availableSlots, isLoading: isLoadingSlots } = useAvailableSlots(formattedDate, selectedService?.id);
+  
   const [step, setStep] = useState<"datetime" | "details" | "success">("datetime");
-
-  // Time slots generated for example
-  const timeSlots = ["10:00", "11:00", "12:00", "13:00", "14:30", "15:30", "16:30", "18:00"];
 
   const isDateBlockedAllDay = (date: Date) => {
     // Check past dates
@@ -47,25 +47,9 @@ export function BookingDrawer() {
     );
   };
 
-  const isTimeBlocked = (date: Date, time: string) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    
-    // Condição A: Já existir um agendamento (booking)
-    if (availability?.some(b => b.date === dateStr && b.time === time)) {
-      return true;
-    }
+  // Deprecated: Client-side blocking logic replaced by server-side availableSlots
+  // kept only for legacy or immediate feedback if needed, but primarily we use the list from server
 
-    // Condição B: Bloqueio do Admin
-    if (!blockedTimes) return false;
-    return blockedTimes.some(b => {
-      if (b.date !== dateStr) return false;
-      if (!b.startTime && !b.endTime) return true; // All day
-      if (b.startTime && b.endTime) {
-        return time >= b.startTime && time <= b.endTime;
-      }
-      return false;
-    });
-  };
 
   const handleBack = () => {
     if (step === "details") {
@@ -148,26 +132,33 @@ export function BookingDrawer() {
                   </div>
                   
                   {selectedDate && (
-                    <div className="grid grid-cols-4 gap-2">
-                      {timeSlots.map(time => {
-                        const isBlocked = isTimeBlocked(selectedDate, time);
-                        return (
-                          <button
-                            key={time}
-                            onClick={() => setTime(time)}
-                            disabled={isBlocked}
-                            className={`
-                              py-2 text-sm font-mono border transition-all
-                              ${selectedTime === time 
-                                ? 'bg-white text-black border-white' 
-                                : 'bg-transparent text-white border-white/20 hover:border-white/50'}
-                              ${isBlocked ? 'opacity-20 pointer-events-none line-through' : ''}
-                            `}
-                          >
-                            {time}
-                          </button>
-                        );
-                      })}
+                    <div className="space-y-4">
+                      {isLoadingSlots ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="w-6 h-6 animate-spin text-white/30" />
+                        </div>
+                      ) : availableSlots && availableSlots.length > 0 ? (
+                        <div className="grid grid-cols-4 gap-2">
+                          {availableSlots.map(time => (
+                            <button
+                              key={time}
+                              onClick={() => setTime(time)}
+                              className={`
+                                py-2 text-sm font-mono border transition-all
+                                ${selectedTime === time 
+                                  ? 'bg-white text-black border-white' 
+                                  : 'bg-transparent text-white border-white/20 hover:border-white/50'}
+                              `}
+                            >
+                              {time}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-white/50 font-mono text-sm">
+                          No available slots for this date.
+                        </div>
+                      )}
                     </div>
                   )}
                 </motion.div>

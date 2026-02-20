@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   useBookings,
@@ -13,6 +13,7 @@ import {
   useUpdateService,
   useDeleteService,
 } from "@/hooks/use-services";
+import { useShopSettings } from "@/hooks/use-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -107,6 +108,18 @@ function Dashboard() {
   const updateService = useUpdateService();
   const deleteService = useDeleteService();
 
+  const { settings, updateSettings } = useShopSettings();
+  const [openTime, setOpenTime] = useState("");
+  const [closeTime, setCloseTime] = useState("");
+
+  // Update local state when settings are loaded
+  useEffect(() => {
+    if (settings) {
+      setOpenTime(prev => prev || settings.openTime);
+      setCloseTime(prev => prev || settings.closeTime);
+    }
+  }, [settings]);
+
   const [blockDate, setBlockDate] = useState("");
   const [blockStartTime, setBlockStartTime] = useState("");
   const [blockEndTime, setBlockEndTime] = useState("");
@@ -175,6 +188,9 @@ function Dashboard() {
             </TabsTrigger>
             <TabsTrigger value="catalog" className="font-mono text-xs tracking-[0.2em]">
               CATÁLOGO
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="font-mono text-xs tracking-[0.2em]">
+              CONFIGURAÇÕES
             </TabsTrigger>
           </TabsList>
 
@@ -813,6 +829,57 @@ function Dashboard() {
                 )}
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Card className="bg-white/5 border-white/10 p-6 rounded-none max-w-2xl">
+              <h2 className="font-mono text-xs tracking-[0.3em] text-white/50 mb-4 uppercase">
+                HORÁRIO DE FUNCIONAMENTO
+              </h2>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="font-mono text-[10px] uppercase text-white/60">
+                      Hora de Abertura
+                    </Label>
+                    <Input
+                      type="time"
+                      value={openTime}
+                      onChange={(e) => setOpenTime(e.target.value)}
+                      className="bg-black/40 border-white/10 text-white font-mono text-xs h-10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-mono text-[10px] uppercase text-white/60">
+                      Hora de Fecho
+                    </Label>
+                    <Input
+                      type="time"
+                      value={closeTime}
+                      onChange={(e) => setCloseTime(e.target.value)}
+                      className="bg-black/40 border-white/10 text-white font-mono text-xs h-10"
+                    />
+                  </div>
+                </div>
+                
+                <Button
+                  onClick={() => {
+                    updateSettings.mutate({
+                      openTime,
+                      closeTime,
+                    });
+                  }}
+                  disabled={updateSettings.isPending}
+                  className="w-full h-10 bg-white text-black hover:bg-white/90 font-mono text-[10px] tracking-[0.3em] uppercase"
+                >
+                  {updateSettings.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "SALVAR CONFIGURAÇÕES"
+                  )}
+                </Button>
+              </div>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>

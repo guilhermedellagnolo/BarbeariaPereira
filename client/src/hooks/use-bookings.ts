@@ -24,6 +24,20 @@ export function useAvailability() {
   });
 }
 
+export function useAvailableSlots(date: string | undefined, serviceId: number | undefined) {
+  return useQuery({
+    queryKey: [api.bookings.availability.path, date, serviceId],
+    queryFn: async () => {
+      if (!date || !serviceId) return [];
+      const url = `${api.bookings.availability.path}?date=${date}&serviceId=${serviceId}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch available slots");
+      return res.json() as Promise<string[]>;
+    },
+    enabled: !!date && !!serviceId,
+  });
+}
+
 export function useCreateBooking() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -51,6 +65,7 @@ export function useCreateBooking() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.bookings.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.bookings.availability.path] });
     },
     onError: (error: any) => {
       const message = error instanceof Error ? error.message : "Booking failed";
