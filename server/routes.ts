@@ -93,12 +93,14 @@ export async function registerRoutes(
 
       // Background tasks (Email & Webhook) - Fire and Forget
       (async () => {
+        console.log(`[Background] Starting background tasks for booking ${booking.id}...`);
         try {
           const services = await storage.getServices();
           const service = services.find(s => s.id === booking.serviceId);
 
           // Email Confirmation
           if (service) {
+            console.log(`[Background] Sending email for booking ${booking.id}...`);
             try {
               await sendBookingConfirmation(
                 booking.customerEmail,
@@ -108,9 +110,12 @@ export async function registerRoutes(
                 booking.time,
                 service.price
               );
+              console.log(`[Background] Email sent successfully for booking ${booking.id}`);
             } catch (emailError) {
-              console.error("❌ Falha ao enviar e-mail de confirmação:", emailError);
+              console.error(`❌ [Background] Failed to send email for booking ${booking.id}:`, emailError);
             }
+          } else {
+            console.warn(`[Background] Service not found for booking ${booking.id}, skipping email.`);
           }
 
           // n8n Webhook Integration

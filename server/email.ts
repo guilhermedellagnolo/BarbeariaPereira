@@ -19,6 +19,8 @@ const transporter = nodemailer.createTransport({
 transporter.verify(function (error, success) {
   if (error) {
     console.error("❌ Erro na configuração do Nodemailer:", error);
+  } else {
+    console.log("✅ Nodemailer configurado com sucesso e pronto para envio.");
   }
 });
 
@@ -34,6 +36,8 @@ export async function sendBookingConfirmation(
     console.warn("Skipping email confirmation: Credentials missing");
     return;
   }
+
+  console.log(`📨 Tentando enviar e-mail para ${email}...`);
 
   const formattedPrice = new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -73,10 +77,16 @@ export async function sendBookingConfirmation(
     </div>
   `;
 
-  await transporter.sendMail({
-    from: `"Barbearia Pereira" <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: "Confirmação de Agendamento - Barbearia Pereira",
-    html,
-  });
+  try {
+    const info = await transporter.sendMail({
+      from: `"Barbearia Pereira" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Confirmação de Agendamento - Barbearia Pereira",
+      html,
+    });
+    console.log(`✅ E-mail enviado com sucesso: ${info.messageId}`);
+  } catch (error) {
+    console.error("❌ Falha crítica no envio do e-mail:", error);
+    throw error; // Re-throw to be caught by the caller
+  }
 }
