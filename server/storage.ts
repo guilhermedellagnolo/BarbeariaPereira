@@ -3,12 +3,15 @@ import {
   users,
   services,
   bookings,
+  blockedTimes,
   type User,
   type InsertUser,
   type Service,
   type InsertService,
   type Booking,
   type InsertBooking,
+  type BlockedTime,
+  type InsertBlockedTime,
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
@@ -26,11 +29,18 @@ export interface IStorage {
   // Services
   getServices(): Promise<Service[]>;
   createService(service: InsertService): Promise<Service>;
+  updateService(id: number, service: Partial<InsertService>): Promise<Service | undefined>;
+  deleteService(id: number): Promise<void>;
 
   // Bookings
   getBookings(): Promise<Booking[]>;
   createBooking(booking: InsertBooking): Promise<Booking>;
   updateBookingStatus(id: number, status: string): Promise<Booking | undefined>;
+
+  // Blocked Times
+  getBlockedTimes(): Promise<BlockedTime[]>;
+  createBlockedTime(blockedTime: InsertBlockedTime): Promise<BlockedTime>;
+  deleteBlockedTime(id: number): Promise<void>;
 
   sessionStore: session.Store;
 }
@@ -68,6 +78,22 @@ export class DatabaseStorage implements IStorage {
     return service;
   }
 
+  async updateService(
+    id: number,
+    update: Partial<InsertService>,
+  ): Promise<Service | undefined> {
+    const [service] = await db
+      .update(services)
+      .set(update)
+      .where(eq(services.id, id))
+      .returning();
+    return service;
+  }
+
+  async deleteService(id: number): Promise<void> {
+    await db.delete(services).where(eq(services.id, id));
+  }
+
   async getBookings(): Promise<Booking[]> {
     return await db.select().from(bookings).orderBy(desc(bookings.createdAt));
   }
@@ -84,6 +110,22 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bookings.id, id))
       .returning();
     return booking;
+  }
+
+  async getBlockedTimes(): Promise<BlockedTime[]> {
+    return await db.select().from(blockedTimes);
+  }
+
+  async createBlockedTime(insertBlockedTime: InsertBlockedTime): Promise<BlockedTime> {
+    const [blockedTime] = await db
+      .insert(blockedTimes)
+      .values(insertBlockedTime)
+      .returning();
+    return blockedTime;
+  }
+
+  async deleteBlockedTime(id: number): Promise<void> {
+    await db.delete(blockedTimes).where(eq(blockedTimes.id, id));
   }
 }
 

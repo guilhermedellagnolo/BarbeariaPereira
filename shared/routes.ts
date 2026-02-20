@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import { insertBookingSchema, insertUserSchema, bookings, services } from './schema';
+import { insertBookingSchema, insertUserSchema, insertServiceSchema, bookings, services, users, blockedTimes, insertBlockedTimeSchema } from './schema';
+
+export * from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -51,6 +53,36 @@ export const api = {
         200: z.array(z.custom<typeof services.$inferSelect>()),
       },
     },
+    create: {
+      method: 'POST' as const,
+      path: '/api/services' as const,
+      input: insertServiceSchema,
+      responses: {
+        201: z.custom<typeof services.$inferSelect>(),
+        400: errorSchemas.validation,
+        401: errorSchemas.unauthorized,
+      },
+    },
+    update: {
+      method: 'PATCH' as const,
+      path: '/api/services/:id' as const,
+      input: insertServiceSchema.partial(),
+      responses: {
+        200: z.custom<typeof services.$inferSelect>(),
+        400: errorSchemas.validation,
+        401: errorSchemas.unauthorized,
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/services/:id' as const,
+      responses: {
+        204: z.void(),
+        401: errorSchemas.unauthorized,
+        404: errorSchemas.notFound,
+      },
+    },
   },
   bookings: {
     list: {
@@ -78,6 +110,42 @@ export const api = {
         200: z.custom<typeof bookings.$inferSelect>(),
         404: errorSchemas.notFound,
         401: errorSchemas.unauthorized,
+      },
+    },
+    availability: {
+      method: 'GET' as const,
+      path: '/api/availability' as const,
+      responses: {
+        200: z.array(z.object({ date: z.string(), time: z.string() })),
+      },
+    },
+  },
+  blockedTimes: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/blocked-times' as const,
+      responses: {
+        200: z.array(z.custom<typeof blockedTimes.$inferSelect>()),
+        401: errorSchemas.unauthorized,
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/blocked-times' as const,
+      input: insertBlockedTimeSchema,
+      responses: {
+        201: z.custom<typeof blockedTimes.$inferSelect>(),
+        400: errorSchemas.validation,
+        401: errorSchemas.unauthorized,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/blocked-times/:id' as const,
+      responses: {
+        204: z.void(),
+        401: errorSchemas.unauthorized,
+        404: errorSchemas.notFound,
       },
     },
   },

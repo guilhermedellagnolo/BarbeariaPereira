@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, type InsertUser } from "@shared/routes";
+import { api } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 
 export function useAuth() {
@@ -18,31 +18,34 @@ export function useAuth() {
   });
 
   const loginMutation = useMutation({
-    mutationFn: async (credentials: Pick<InsertUser, "username" | "password">) => {
+    mutationFn: async (credentials: { username: string; password: string }) => {
       const res = await fetch(api.auth.login.path, {
         method: api.auth.login.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
       });
-      
+
       if (!res.ok) {
         if (res.status === 401) {
           throw new Error("Invalid credentials");
         }
         throw new Error("Login failed");
       }
-      
+
       return api.auth.login.responses[200].parse(await res.json());
     },
     onSuccess: (user) => {
       queryClient.setQueryData([api.auth.me.path], user);
-      toast({ title: "Welcome back", description: `Logged in as ${user.name}` });
+      toast({
+        title: "Welcome back",
+        description: `Logged in as ${user.name}`,
+      });
     },
     onError: (error) => {
-      toast({ 
-        title: "Login failed", 
-        description: error.message,
-        variant: "destructive"
+      toast({
+        title: "Login failed",
+        description: (error as Error).message,
+        variant: "destructive",
       });
     },
   });

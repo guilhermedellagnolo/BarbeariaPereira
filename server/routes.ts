@@ -1,9 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth } from "./auth";
+import { setupAuth, hashPassword } from "./auth";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import { sendBookingConfirmation } from "./email";
+import rateLimit from "express-rate-limit";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -12,19 +14,97 @@ export async function registerRoutes(
   // Setup authentication (Passport strategy)
   setupAuth(app);
 
+  // Booking specific rate limiter - 3 requests per hour
+  const bookingLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 3,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: "Limite de agendamentos excedido. Por favor, tente novamente em uma hora."
+  });
+
   // === Services Routes ===
   app.get(api.services.list.path, async (req, res) => {
     const services = await storage.getServices();
     res.json(services);
   });
 
+  app.post(api.services.create.path, async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    try {
+      const input = api.services.create.input.parse(req.body);
+      const service = await storage.createService(input);
+      res.status(201).json(service);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join("."),
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.patch(api.services.update.path, async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const id = Number(req.params.id);
+    try {
+      const input = api.services.update.input.parse(req.body);
+      const updated = await storage.updateService(id, input);
+      if (!updated) {
+        return res.status(404).json({ message: "Service not found" });
+      }
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join("."),
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.services.delete.path, async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const id = Number(req.params.id);
+    await storage.deleteService(id);
+    res.status(204).send();
+  });
+
   // === Bookings Routes ===
   
   // Public create booking
-  app.post(api.bookings.create.path, async (req, res) => {
+  app.post(api.bookings.create.path, bookingLimiter, async (req, res) => {
     try {
       const input = api.bookings.create.input.parse(req.body);
       const booking = await storage.createBooking(input);
+
+      // Email Confirmation
+      try {
+        const services = await storage.getServices();
+        const service = services.find(s => s.id === booking.serviceId);
+        if (service) {
+          await sendBookingConfirmation(
+            booking.customerEmail,
+            booking.customerName,
+            service.name,
+            booking.date,
+            booking.time,
+            service.price
+          );
+        }
+      } catch (emailError) {
+        console.error("❌ Falha ao enviar e-mail de confirmação:", emailError);
+      }
       
       // n8n Webhook Integration
       const webhookUrl = process.env.N8N_WEBHOOK_URL;
@@ -73,6 +153,18 @@ export async function registerRoutes(
     res.json(bookings);
   });
 
+  // Public Availability Route
+  app.get(api.bookings.availability.path, async (req, res) => {
+    const bookings = await storage.getBookings();
+    const availability = bookings
+      .filter(b => b.status !== "cancelled") // Only active bookings block time
+      .map(b => ({
+        date: b.date,
+        time: b.time
+      }));
+    res.json(availability);
+  });
+
   app.patch(api.bookings.updateStatus.path, async (req, res) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -87,6 +179,40 @@ export async function registerRoutes(
     res.json(updated);
   });
 
+  // === Blocked Times Routes ===
+  app.get(api.blockedTimes.list.path, async (req, res) => {
+    const blockedTimes = await storage.getBlockedTimes();
+    res.json(blockedTimes);
+  });
+
+  app.post(api.blockedTimes.create.path, async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    try {
+      const input = api.blockedTimes.create.input.parse(req.body);
+      const blockedTime = await storage.createBlockedTime(input);
+      res.status(201).json(blockedTime);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join("."),
+        });
+      }
+      throw err;
+    }
+  });
+
+  app.delete(api.blockedTimes.delete.path, async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const id = Number(req.params.id);
+    await storage.deleteBlockedTime(id);
+    res.status(204).send();
+  });
+
   // === SEED DATA ===
   await seedDatabase();
 
@@ -96,7 +222,6 @@ export async function registerRoutes(
 async function seedDatabase() {
   const existingServices = await storage.getServices();
   if (existingServices.length === 0) {
-    console.log("Seeding services...");
     await storage.createService({
       name: "Corte Premium",
       description: "Corte na tesoura/máquina com finalização de alta precisão.",
@@ -123,12 +248,12 @@ async function seedDatabase() {
   // Ensure an admin user exists
   const existingAdmin = await storage.getUserByUsername("admin");
   if (!existingAdmin) {
-    console.log("Creating admin user...");
-    // Password will be hashed by auth setup in real scenario, but for now we rely on the auth module to handle creation or we manually create with hashed pass
-    // For simplicity here, we assume the auth module handles registration or we use a known hash. 
-    // IMPORTANT: In a real app, use a proper registration flow or seed with hashed password.
-    // We will handle this in server/auth.ts or just create it via the UI once for this demo,
-    // OR, better, let's just create it here if we had a hashing utility exposed.
-    // For now, let's leave admin creation to a registration endpoint or manual entry.
+    const hashedPassword = await hashPassword("admin123");
+    await storage.createUser({
+      username: "admin",
+      password: hashedPassword,
+      name: "Administrador",
+      isAdmin: true,
+    });
   }
 }

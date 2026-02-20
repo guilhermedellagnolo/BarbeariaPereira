@@ -1,10 +1,28 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 
 const app = express();
 const httpServer = createServer(app);
+
+// Security Headers
+app.use(helmet({
+  contentSecurityPolicy: false, // Disabled for development/compatibility with Vite
+}));
+
+// Global Rate Limiting - 100 requests per 15 minutes
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: "Muitas requisições deste IP, por favor tente novamente mais tarde."
+});
+app.use("/api", globalLimiter);
 
 declare module "http" {
   interface IncomingMessage {
@@ -94,7 +112,6 @@ app.use((req, res, next) => {
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
     },
     () => {
       log(`serving on port ${port}`);

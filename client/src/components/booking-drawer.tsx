@@ -5,10 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { useBookingStore } from "@/hooks/use-store";
-import { useCreateBooking } from "@/hooks/use-bookings";
+import { useCreateBooking, useBlockedTimes, useAvailability } from "@/hooks/use-bookings";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Check } from "lucide-react";
+import { Loader2, Check, ArrowLeft } from "lucide-react";
 
 export function BookingDrawer() {
   const {
@@ -21,23 +21,69 @@ export function BookingDrawer() {
     setTime,
     customerName,
     customerPhone,
+    customerEmail,
     setCustomerDetails,
     reset
   } = useBookingStore();
 
   const createBooking = useCreateBooking();
+  const { data: blockedTimes } = useBlockedTimes();
+  const { data: availability } = useAvailability();
   const [step, setStep] = useState<"datetime" | "details" | "success">("datetime");
 
   // Time slots generated for example
   const timeSlots = ["10:00", "11:00", "12:00", "13:00", "14:30", "15:30", "16:30", "18:00"];
 
+  const isDateBlockedAllDay = (date: Date) => {
+    // Check past dates
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date < today) return true;
+
+    if (!blockedTimes) return false;
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return blockedTimes.some(b => 
+      b.date === dateStr && !b.startTime && !b.endTime
+    );
+  };
+
+  const isTimeBlocked = (date: Date, time: string) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    
+    // Condição A: Já existir um agendamento (booking)
+    if (availability?.some(b => b.date === dateStr && b.time === time)) {
+      return true;
+    }
+
+    // Condição B: Bloqueio do Admin
+    if (!blockedTimes) return false;
+    return blockedTimes.some(b => {
+      if (b.date !== dateStr) return false;
+      if (!b.startTime && !b.endTime) return true; // All day
+      if (b.startTime && b.endTime) {
+        return time >= b.startTime && time <= b.endTime;
+      }
+      return false;
+    });
+  };
+
+  const handleBack = () => {
+    if (step === "details") {
+      setStep("datetime");
+    } else if (step === "datetime") {
+      setDrawerOpen(false);
+      reset();
+    }
+  };
+
   const handleNext = () => {
     if (step === "datetime" && selectedDate && selectedTime) {
       setStep("details");
-    } else if (step === "details" && customerName && customerPhone && selectedService && selectedDate && selectedTime) {
+    } else if (step === "details" && customerName && customerPhone && customerEmail && selectedService && selectedDate && selectedTime) {
       createBooking.mutate({
         customerName,
         customerPhone,
+        customerEmail,
         serviceId: selectedService.id,
         date: format(selectedDate, 'yyyy-MM-dd'),
         time: selectedTime
@@ -60,6 +106,17 @@ export function BookingDrawer() {
       <DrawerContent className="bg-[#0A0A0A] border-white/10 text-white max-w-2xl mx-auto rounded-t-[20px]">
         <div className="mx-auto w-full max-w-md">
           <DrawerHeader className="text-left">
+            {step !== "success" && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="p-0 h-auto text-white/50 hover:text-white mb-4 font-mono text-xs uppercase tracking-widest hover:bg-transparent"
+                onClick={handleBack}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                BACK
+              </Button>
+            )}
             <DrawerTitle className="font-display text-2xl">
               {step === "success" ? "Booking Confirmed" : `Book ${selectedService?.name}`}
             </DrawerTitle>
@@ -85,27 +142,32 @@ export function BookingDrawer() {
                       mode="single"
                       selected={selectedDate}
                       onSelect={setDate}
-                      disabled={(date) => date < new Date()}
+                      disabled={isDateBlockedAllDay}
                       className="border border-white/10 rounded-md p-4"
                     />
                   </div>
                   
                   {selectedDate && (
                     <div className="grid grid-cols-4 gap-2">
-                      {timeSlots.map(time => (
-                        <button
-                          key={time}
-                          onClick={() => setTime(time)}
-                          className={`
-                            py-2 text-sm font-mono border transition-all
-                            ${selectedTime === time 
-                              ? 'bg-white text-black border-white' 
-                              : 'bg-transparent text-white border-white/20 hover:border-white/50'}
-                          `}
-                        >
-                          {time}
-                        </button>
-                      ))}
+                      {timeSlots.map(time => {
+                        const isBlocked = isTimeBlocked(selectedDate, time);
+                        return (
+                          <button
+                            key={time}
+                            onClick={() => setTime(time)}
+                            disabled={isBlocked}
+                            className={`
+                              py-2 text-sm font-mono border transition-all
+                              ${selectedTime === time 
+                                ? 'bg-white text-black border-white' 
+                                : 'bg-transparent text-white border-white/20 hover:border-white/50'}
+                              ${isBlocked ? 'opacity-20 pointer-events-none line-through' : ''}
+                            `}
+                          >
+                            {time}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </motion.div>
@@ -124,7 +186,7 @@ export function BookingDrawer() {
                     <Input 
                       id="name" 
                       value={customerName}
-                      onChange={(e) => setCustomerDetails(e.target.value, customerPhone)}
+                      onChange={(e) => setCustomerDetails(e.target.value, customerPhone, customerEmail)}
                       className="bg-white/5 border-white/10 text-white font-display text-lg h-12 rounded-none focus-visible:ring-0 focus-visible:border-white"
                       placeholder="JOHN DOE"
                     />
@@ -134,9 +196,20 @@ export function BookingDrawer() {
                     <Input 
                       id="phone" 
                       value={customerPhone}
-                      onChange={(e) => setCustomerDetails(customerName, e.target.value)}
+                      onChange={(e) => setCustomerDetails(customerName, e.target.value, customerEmail)}
                       className="bg-white/5 border-white/10 text-white font-display text-lg h-12 rounded-none focus-visible:ring-0 focus-visible:border-white"
                       placeholder="+1 (555) 000-0000"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="font-mono text-xs uppercase text-white/50">Email Address</Label>
+                    <Input 
+                      id="email" 
+                      type="email"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerDetails(customerName, customerPhone, e.target.value)}
+                      className="bg-white/5 border-white/10 text-white font-display text-lg h-12 rounded-none focus-visible:ring-0 focus-visible:border-white"
+                      placeholder="john@example.com"
                     />
                   </div>
 
@@ -213,7 +286,7 @@ export function BookingDrawer() {
                 onClick={handleNext}
                 disabled={
                   (step === "datetime" && (!selectedDate || !selectedTime)) ||
-                  (step === "details" && (!customerName || !customerPhone)) ||
+                  (step === "details" && (!customerName || !customerPhone || !customerEmail)) ||
                   createBooking.isPending
                 }
                 className="w-full h-12 bg-white text-black hover:bg-white/90 rounded-none font-mono uppercase tracking-widest text-xs"
@@ -227,6 +300,11 @@ export function BookingDrawer() {
               >
                 Done
               </Button>
+            )}
+            {step === "details" && (
+              <p className="text-[10px] text-white/30 font-mono text-center mt-2">
+                A confirmação será enviada para o seu e-mail.
+              </p>
             )}
           </DrawerFooter>
         </div>

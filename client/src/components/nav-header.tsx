@@ -17,12 +17,12 @@ export function NavHeader() {
     >
       <div className="flex items-center gap-3">
         <Scissors className="w-5 h-5" />
-        <span className="font-mono text-sm tracking-widest uppercase hidden md:block">Precision Cuts</span>
+        <span className="font-mono text-sm tracking-widest uppercase hidden md:block">Barbearia Pereira</span>
       </div>
 
       <nav className="flex items-center gap-8">
-        <button onClick={() => scrollToSection('lookbook')} className="text-sm font-medium hover:opacity-70 transition-opacity">LOOKBOOK</button>
-        <button onClick={() => scrollToSection('services')} className="text-sm font-medium hover:opacity-70 transition-opacity">SERVICES</button>
+        <button onClick={() => scrollToSection('lookbook')} className="text-sm font-medium hover:opacity-70 transition-opacity">GALERIA</button>
+        <button onClick={() => scrollToSection('services')} className="text-sm font-medium hover:opacity-70 transition-opacity">SERVIÇOS</button>
       </nav>
     </motion.header>
   );
